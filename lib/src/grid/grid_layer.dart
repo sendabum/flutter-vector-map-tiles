@@ -344,10 +344,21 @@ class _VectorTileLayerState extends DisposableState<_VectorTileLayer> {
   @override
   Widget build(BuildContext context) {
     _tileWidgets.updateWidgets();
-    final tiles = _tileWidgets.all.entries
-        .where((entry) =>
-            widget.options.paintNoDataTiles || entry.value.model.hasData)
-        .toList(growable: false)
+    // VM code for sendabum
+    // filters tiles based on data availability and !ALSO layers presence
+    // This is to avoid rendering empty tiles with no layers and allow 'background layers'(base) to be visible
+    // as well as to paint background for tiles that overlay 'background layers'(base)
+    final tiles = _tileWidgets.all.entries.where((entry) {
+      final shouldPaintTile =
+          widget.options.paintNoDataTiles || entry.value.model.hasData;
+
+      final tileSetTiles = entry.value.model.tileset?.tiles.values;
+      final allTilesHaveLayers = tileSetTiles != null &&
+          tileSetTiles.isNotEmpty &&
+          tileSetTiles.every((tile) => tile.layers.isNotEmpty);
+
+      return shouldPaintTile && allTilesHaveLayers;
+    }).toList(growable: false)
       ..sort(_orderTileWidgets);
     if (tiles.isEmpty) {
       return Container();
